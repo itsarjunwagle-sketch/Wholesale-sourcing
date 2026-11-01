@@ -34,7 +34,7 @@ button.danger{background:#fff0f0;color:#b42318;border:1px solid #ffd5d5}
 .record{display:flex;gap:11px;align-items:flex-start}.thumb{width:68px;height:68px;border-radius:9px;object-fit:cover;background:#edf1f5;flex:none}
 .record h3{font-size:15px;margin:0 0 4px}.record p{font-size:12px;color:var(--muted);margin:3px 0}
 .pill{display:inline-block;background:#edf4ff;color:#2456a6;border-radius:20px;padding:3px 8px;font-size:11px;margin:2px 3px 2px 0}
-.status{padding:9px 11px;background:#eef7f1;border-radius:9px;color:#17663c;font-size:12px;margin:8px 0}
+.status{padding:9px 11px;background:#eef7f1;border-radius:9px;color:#17663c;font-size:12px;margin:8px 0}.synced{color:#16834a;font-weight:650}.pending{color:#b54708;font-weight:650}.photo-grid a{display:inline-block}.photo-grid img{width:74px;height:74px;object-fit:cover;border-radius:8px}.detail-dialog{border:0;border-radius:16px;padding:18px;max-width:640px;width:calc(100% - 28px);max-height:85vh;overflow:auto;box-shadow:0 20px 60px #0004}.detail-dialog::backdrop{background:#14203399}.detail-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.detail-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:14px 0}.detail-fields div{background:#f4f6f8;border-radius:9px;padding:9px}.detail-fields b{display:block;font-size:11px;color:#667085;margin-bottom:3px}.detail-fields span{font-size:13px;overflow-wrap:anywhere}.detail-photos{display:flex;gap:8px;flex-wrap:wrap}.detail-photos img{width:100px;height:100px;object-fit:cover;border-radius:9px}.detail-photos a{font-size:12px}
 .photo-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.photo-grid img{width:74px;height:74px;object-fit:cover;border-radius:8px}
 footer{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:10px max(14px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom));display:flex;justify-content:center;z-index:4}
 footer div{max-width:760px;width:100%;display:flex;gap:8px}footer button{flex:1}
@@ -84,7 +84,7 @@ footer div{max-width:760px;width:100%;display:flex;gap:8px}footer button{flex:1}
       <label for="shipping">Shipping / delivery details</label><input id="shipping" placeholder="Myanmar freight forwarder, delivery terms...">
       <label for="notes">Notes / negotiation details</label><textarea id="notes" placeholder="Sizes, colours, quality, best sellers, payment terms..."></textarea>
       <label for="photos">Photos (shop, supplier, products)</label><input id="photos" type="file" accept="image/*" capture="environment" multiple>
-      <p class="small">Photos are stored on this iPhone in the app database. Large photos use storage space; keep a separate backup of important originals.</p>
+      <p class="small" id="photoHint">Photos are saved locally first, then uploaded to Google Drive during sync.</p>
       <div id="preview" class="photo-grid"></div>
       <div class="actions"><button type="submit">Save record offline</button><button type="reset" class="secondary" id="clearBtn">Clear form</button></div>
       <p id="saveMessage" class="status hidden"></p>
@@ -106,26 +106,27 @@ footer div{max-width:760px;width:100%;display:flex;gap:8px}footer button{flex:1}
 
   <section id="tab-sync" class="hidden">
     <div class="panel">
-      <h2>Google Sheets synchronization</h2>
-      <p class="small">The app saves locally first. Configure your private Google Apps Script web-app URL when you have internet access. While in China, records remain on your iPhone until sync is available.</p>
+      <h2>Google Sheets + Drive sync</h2>
+      <p class="small">The app saves locally first. Supplier details go to Google Sheets; original photo copies go to a private Google Drive folder. When this app is open and internet returns, pending records sync automatically. iOS may pause syncing while the app is closed.</p>
       <label for="scriptUrl">Google Apps Script Web App URL</label><input id="scriptUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec">
-      <label for="syncToken">Shared sync key (optional but recommended)</label><input id="syncToken" type="password" placeholder="Your private sync key">
-      <div class="actions"><button id="saveConfig">Save sync settings</button><button id="syncNow" class="secondary">Send pending records</button></div>
-      <p id="syncMessage" class="status">Local database is ready. No Google connection is required to save records.</p>
+      <label for="syncToken">Private sync key</label><input id="syncToken" type="password" placeholder="Your private sync key">
+      <div class="actions"><button id="saveConfig">Save sync settings</button><button id="syncNow" class="secondary">Sync now</button></div>
+      <p id="syncMessage" class="status">Local database is ready. Configure Google once; syncing will run automatically when the app is open and online.</p><p id="connectionState" class="small">Checking connection…</p>
     </div>
     <div class="panel">
       <h2>Backup and restore</h2>
-      <p class="small">Export a CSV copy of your records. Photos are kept in the app's local database and are not included in CSV.</p>
+      <p class="small">Export CSV for spreadsheet use, or a full JSON backup including local photos. Google Drive photo copies are also linked from each synced spreadsheet row.</p>
       <div class="actions"><button id="exportCsv">Export CSV</button><button id="exportJson" class="secondary">Export full backup (with photos)</button></div>
       <label for="importJson">Restore full backup JSON</label><input id="importJson" type="file" accept="application/json">
       <p class="small">Keep the exported JSON somewhere safe. It contains your records and photo data.</p>
     </div>
     <div class="panel">
       <h2>China travel reminder</h2>
-      <p class="small">Test this app before departure, save it to your iPhone Home Screen, and keep your phone charged. Google Sheets sync may not work on ordinary mainland Chinese internet. Local saving, browsing and photo capture are designed to work offline after the first load.</p>
+      <p class="small">Google services may be unavailable on ordinary mainland Chinese internet. The app continues saving supplier details and photos locally; sync resumes when Google services and internet are reachable. Keep regular JSON backups.</p>
     </div>
   </section>
 </main>
+<dialog id="detailDialog" class="detail-dialog"><div class="detail-head"><h2 id="detailTitle">Record details</h2><button id="closeDetails" class="secondary" type="button">Close</button></div><div id="detailFields" class="detail-fields"></div><h3>Photos</h3><div id="detailPhotos" class="detail-photos"></div></dialog>
 <footer><div><button id="footerAdd">＋ Add</button><button id="footerRecords" class="secondary">Records</button><button id="footerSync" class="secondary">Sync</button></div></footer>
 <script src="app.js"></script>
 </body></html>

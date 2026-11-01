@@ -1,45 +1,71 @@
-# Wholesale Sourcing Log — iPhone PWA
+# Wholesale Sourcing Log — iPhone PWA (Google Sheets + Drive edition)
 
-An offline-first Progressive Web App for recording clothing and electronics suppliers, product samples, prices, MOQ, WeChat contacts, notes and photos.
+An offline-first PWA for collecting children's clothing and electronics suppliers, product samples, prices, MOQ, WeChat contacts, notes and photos.
 
-## What's included
-- Local IndexedDB storage: records and photos stay on the device.
-- Supplier and product records, clothing/electronics categories, market/floor/shop fields.
-- Search and filter records.
-- CSV export and full JSON backup/restore (including photos).
-- Optional Google Sheets sync endpoint using Google Apps Script.
-- PWA manifest and service worker for Home Screen installation/offline app shell.
+## What this version does
+- Saves records and photos immediately in IndexedDB on the iPhone.
+- Resizes captured photos to a practical upload size before local storage.
+- Shows photo previews and a record detail gallery.
+- Automatically attempts to sync when the app is open and the device comes online.
+- Writes supplier records to a Google Sheet (`Suppliers` and `Products` tabs).
+- Uploads photo copies to a private Google Drive folder and stores their Drive URLs in the matching spreadsheet row.
+- Verifies sync using a record ID status check before marking a local record as synced.
+- Retries pending records on reconnect, app launch and when returning to the app.
+- CSV export and full JSON backup/restore including local photos.
 
-## Important limitations in this first version
-- Host the app over HTTPS before installing it as a PWA. Opening `index.html` as a file does not enable service workers.
-- Open the hosted app once while online so the app shell is cached. Then test airplane mode before travelling.
-- The sync request uses a browser cross-origin `no-cors` POST. The app cannot read Google's response, so it intentionally does not mark local records as synced automatically. Check the Google Sheet after sending. This avoids falsely claiming that a record was saved.
-- Photos are stored locally and included in JSON backup. The initial Sheets connector stores the photo count, not image files. A later version can upload photos to Google Drive.
-- Browser storage can be cleared by iOS under storage management. Export a full JSON backup regularly.
+## Important behavior and limitations
+- **Offline-first:** no internet is required to save, browse or view records/photos already on this iPhone.
+- **Automatic sync:** browsers and iOS may suspend a PWA while it is closed. Sync happens when the app is open/foregrounded and online, not guaranteed in the background while closed.
+- **China connectivity:** Google Sheets and Drive may be unreachable on ordinary mainland Chinese internet. Records queue locally and retry when the service is reachable (for example, later on a connection that can access Google).
+- Drive files are **private by default**. They are viewable by the Google account that owns the Drive folder and anyone you explicitly share with. Do not make supplier photos public unless you intend to.
+- Keep regular full JSON backups. Clearing Safari website data can erase local IndexedDB data.
+- Existing local records from v1 remain in the same IndexedDB database and can be synced by this version.
 
-## Install on iPhone
-1. Upload this folder to an HTTPS static host (for example, a private GitHub Pages repository or another HTTPS host).
-2. Open the HTTPS address in Safari on iPhone.
-3. Wait for the page to load completely once.
-4. Tap Share → Add to Home Screen → Add.
-5. Launch from the Home Screen.
-6. Test adding a supplier, taking a photo, closing the app, reopening it, and switching on Airplane Mode.
+## Setup A — create Google Sheet
+1. Sign in to the Google account where you want the database.
+2. Create a spreadsheet named `Wholesale Sourcing Database`.
+3. Copy the spreadsheet ID from its URL: `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`.
 
-## Set up Google Sheets sync
-1. Create a Google spreadsheet.
-2. Copy its spreadsheet ID from its URL: `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`.
-3. Open Extensions → Apps Script.
-4. Replace the starter code with `Code.gs` from this package.
-5. Set `SHEET_ID` and replace `SYNC_KEY` with a long random secret.
-6. Deploy → New deployment → Web app.
-7. Execute as: Me. Set access to the narrowest setting that permits your use. If using "Anyone", protect the endpoint with the secret key and do not share the URL/key.
-8. Copy the deployed `/exec` URL.
-9. In the app, open Sync & backup, paste the URL and the same sync key, then save.
-10. Tap Send pending records when you have a working connection. Check the Suppliers and Products tabs in the spreadsheet.
+## Setup B — create Google Drive photo folder
+1. In Google Drive, create a folder named `Wholesale Sourcing Photos`.
+2. Open it and copy the folder ID from the URL: `https://drive.google.com/drive/folders/FOLDER_ID`.
+3. Keep this folder private. The script creates photo files inside it.
 
-## Data fields
-Record ID, type, category, market, floor/shop, name, WeChat, phone, price (RMB), MOQ, business type, rating, shipping, notes, created time, sync status and photo count.
+## Setup C — deploy Apps Script
+1. Open the Google Sheet → **Extensions → Apps Script**.
+2. Replace the editor contents with `Code.gs` from this package.
+3. Set `SHEET_ID` to your spreadsheet ID.
+4. Set `DRIVE_FOLDER_ID` to your Drive folder ID.
+5. Replace `SYNC_KEY` with a long private random value (at least 32 characters). Example: generate a random password; do not reuse your Google password.
+6. Save the project.
+7. Select **Deploy → New deployment → Web app**.
+8. Execute as: **Me**.
+9. Who has access: choose **Anyone** only if required for the PWA to reach the endpoint. The secret key protects write requests; the status endpoint only reveals whether an unguessable record UUID has synced. If your organization offers a narrower setting that works, use it.
+10. Deploy and authorize the requested Sheets and Drive permissions.
+11. Copy the Web app URL ending in `/exec`.
 
-## Backups
-- CSV: spreadsheet-friendly text records, no photos.
-- Full JSON: records plus photos. Store securely because it contains supplier contact information and product images.
+### When you change Code.gs later
+Use **Deploy → Manage deployments → Edit** (pencil) → select **New version** → Deploy. The existing `/exec` URL normally remains the same.
+
+## Setup D — connect the iPhone app
+1. Open your hosted PWA in Safari.
+2. Go to **Sync & backup**.
+3. Paste the Apps Script `/exec` URL.
+4. Paste the exact `SYNC_KEY` value from Code.gs.
+5. Tap **Save sync settings**.
+6. Add a test supplier with one photo. Keep the PWA open while it syncs.
+7. Check the `Suppliers` sheet and `Wholesale Sourcing Photos` Drive folder. The row should contain Drive photo links and the app should show `Synced to Google`.
+
+## Where to view your data
+- Supplier records: Google Sheet → `Suppliers` tab.
+- Product/sample records: Google Sheet → `Products` tab.
+- Photos: Google Drive → `Wholesale Sourcing Photos` folder. The spreadsheet row also contains clickable Drive URLs in `photoLinks`.
+- The hidden `_SyncLog` sheet is used by the PWA to confirm that an upload completed. Do not delete it.
+
+## Security notes
+- Keep the Apps Script URL and sync key private.
+- Drive photos are private by default; sharing the spreadsheet does not automatically grant access to Drive photos.
+- Anyone who can access the Apps Script deployment URL can call its endpoint, but write operations require the secret key. For a production multi-user app, use a proper authenticated backend.
+
+## PWA hosting / update
+Upload the contents of this folder to your existing HTTPS host, replacing the old files. Keep `index.html`, `app.js`, `sw.js`, `Code.gs`, `manifest.webmanifest` and the icons together in the same folder. Reload the PWA while online; the service worker cache version is updated to v2.
