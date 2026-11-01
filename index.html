@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17324f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Sourcing Log">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Wholesale Sourcing Log</title>
+<style>
+:root{--navy:#17324f;--blue:#2563eb;--bg:#f3f6fa;--card:#fff;--muted:#667085;--line:#e4e9f0;--green:#16834a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17212f}
+header{background:var(--navy);color:white;padding:18px 16px 20px;position:sticky;top:0;z-index:5}
+header h1{font-size:21px;margin:0 0 4px}header p{margin:0;color:#cbd8e7;font-size:12px}
+main{max-width:760px;margin:auto;padding:14px 14px 92px}
+.tabs{display:flex;gap:8px;margin:0 0 14px;overflow:auto}
+.tabs button{white-space:nowrap;border:1px solid var(--line);background:white;border-radius:20px;padding:9px 14px;color:#344054}
+.tabs button.active{background:var(--navy);color:white;border-color:var(--navy)}
+.panel,.stat,.record{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
+.stat strong{display:block;font-size:22px;color:var(--navy)}.stat span{font-size:11px;color:var(--muted)}
+h2{font-size:17px;margin:0 0 12px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:12px;font-weight:650;color:#475467;margin:10px 0 5px}
+input,select,textarea{width:100%;border:1px solid #d5dce5;border-radius:10px;padding:11px;font:inherit;background:white;color:#17212f}
+textarea{min-height:72px;resize:vertical}
+button,.btn{border:0;border-radius:10px;padding:11px 14px;background:var(--blue);color:white;font-weight:650;font-size:14px;cursor:pointer}
+button.secondary{background:#edf2f7;color:#26384d;border:1px solid var(--line)}
+button.danger{background:#fff0f0;color:#b42318;border:1px solid #ffd5d5}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.small{font-size:12px;color:var(--muted)}.hidden{display:none!important}
+.record{display:flex;gap:11px;align-items:flex-start}.thumb{width:68px;height:68px;border-radius:9px;object-fit:cover;background:#edf1f5;flex:none}
+.record h3{font-size:15px;margin:0 0 4px}.record p{font-size:12px;color:var(--muted);margin:3px 0}
+.pill{display:inline-block;background:#edf4ff;color:#2456a6;border-radius:20px;padding:3px 8px;font-size:11px;margin:2px 3px 2px 0}
+.status{padding:9px 11px;background:#eef7f1;border-radius:9px;color:#17663c;font-size:12px;margin:8px 0}
+.photo-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.photo-grid img{width:74px;height:74px;object-fit:cover;border-radius:8px}
+footer{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:10px max(14px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom));display:flex;justify-content:center;z-index:4}
+footer div{max-width:760px;width:100%;display:flex;gap:8px}footer button{flex:1}
+@media(max-width:520px){.row{grid-template-columns:1fr}.stats{gap:6px}.stat{padding:10px}.stat strong{font-size:19px}}
+</style>
+</head>
+<body>
+<header><h1>Wholesale Sourcing Log</h1><p>GUANGZHOU · CLOTHING & ELECTRONICS · OFFLINE FIRST</p></header>
+<main>
+  <div class="stats">
+    <div class="stat"><strong id="supplierCount">0</strong><span>Suppliers</span></div>
+    <div class="stat"><strong id="productCount">0</strong><span>Products</span></div>
+    <div class="stat"><strong id="pendingCount">0</strong><span>Waiting to sync</span></div>
+  </div>
+  <nav class="tabs">
+    <button class="active" data-tab="add">＋ Add record</button>
+    <button data-tab="records">Records</button>
+    <button data-tab="sync">Sync & backup</button>
+  </nav>
+
+  <section id="tab-add">
+    <form id="entryForm" class="panel">
+      <h2 id="formTitle">New supplier / product</h2>
+      <div class="row">
+        <div><label for="recordType">Record type</label><select id="recordType"><option value="supplier">Supplier</option><option value="product">Product / sample</option></select></div>
+        <div><label for="category">Category</label><select id="category"><option>Children's clothing</option><option>Electronics & gadgets</option></select></div>
+      </div>
+      <div class="row">
+        <div><label for="market">Market / building</label><select id="market">
+          <option>Lihu 荔湖</option><option>Lishang 荔尚</option><option>Fuli 富力</option><option>Litang 荔塘</option><option>Zhuorong 卓荣</option><option>Guanghong 广鸿</option><option>Yimin 益民</option><option>Shijing 石井</option><option>Other</option>
+        </select></div>
+        <div><label for="floor">Floor / shop number</label><input id="floor" placeholder="e.g. F2, Shop 218"></div>
+      </div>
+      <label for="name">Supplier or product name *</label><input id="name" required placeholder="Shop name, contact or product">
+      <div class="row">
+        <div><label for="wechat">WeChat ID / QR contact</label><input id="wechat" placeholder="WeChat ID or contact name"></div>
+        <div><label for="phone">Phone</label><input id="phone" inputmode="tel" placeholder="+86 ..."></div>
+      </div>
+      <div class="row">
+        <div><label for="price">Wholesale price (RMB)</label><input id="price" type="number" min="0" step="0.01" placeholder="e.g. 18.50"></div>
+        <div><label for="moq">MOQ / 起订量</label><input id="moq" placeholder="e.g. 5 pcs / 1 carton"></div>
+      </div>
+      <div class="row">
+        <div><label for="businessType">Business type</label><select id="businessType"><option>Unknown</option><option>Factory</option><option>Trading company</option><option>Wholesale shop</option></select></div>
+        <div><label for="rating">Supplier rating</label><select id="rating"><option value="">Not rated</option><option>1 - Poor</option><option>2 - Fair</option><option>3 - Good</option><option>4 - Very good</option><option>5 - Excellent</option></select></div>
+      </div>
+      <label for="shipping">Shipping / delivery details</label><input id="shipping" placeholder="Myanmar freight forwarder, delivery terms...">
+      <label for="notes">Notes / negotiation details</label><textarea id="notes" placeholder="Sizes, colours, quality, best sellers, payment terms..."></textarea>
+      <label for="photos">Photos (shop, supplier, products)</label><input id="photos" type="file" accept="image/*" capture="environment" multiple>
+      <p class="small">Photos are stored on this iPhone in the app database. Large photos use storage space; keep a separate backup of important originals.</p>
+      <div id="preview" class="photo-grid"></div>
+      <div class="actions"><button type="submit">Save record offline</button><button type="reset" class="secondary" id="clearBtn">Clear form</button></div>
+      <p id="saveMessage" class="status hidden"></p>
+    </form>
+  </section>
+
+  <section id="tab-records" class="hidden">
+    <div class="panel">
+      <h2>Saved records</h2>
+      <input id="search" placeholder="Search name, market, category, WeChat...">
+      <div class="row">
+        <div><label for="filterType">Type</label><select id="filterType"><option value="all">All records</option><option value="supplier">Suppliers</option><option value="product">Products</option></select></div>
+        <div><label for="filterMarket">Market</label><select id="filterMarket"><option value="all">All markets</option><option>Lihu 荔湖</option><option>Lishang 荔尚</option><option>Fuli 富力</option><option>Litang 荔塘</option><option>Zhuorong 卓荣</option><option>Guanghong 广鸿</option><option>Yimin 益民</option><option>Shijing 石井</option><option>Other</option></select></div>
+      </div>
+    </div>
+    <div id="recordList"></div>
+    <p id="emptyState" class="small">No records yet. Add your first supplier or product.</p>
+  </section>
+
+  <section id="tab-sync" class="hidden">
+    <div class="panel">
+      <h2>Google Sheets synchronization</h2>
+      <p class="small">The app saves locally first. Configure your private Google Apps Script web-app URL when you have internet access. While in China, records remain on your iPhone until sync is available.</p>
+      <label for="scriptUrl">Google Apps Script Web App URL</label><input id="scriptUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec">
+      <label for="syncToken">Shared sync key (optional but recommended)</label><input id="syncToken" type="password" placeholder="Your private sync key">
+      <div class="actions"><button id="saveConfig">Save sync settings</button><button id="syncNow" class="secondary">Send pending records</button></div>
+      <p id="syncMessage" class="status">Local database is ready. No Google connection is required to save records.</p>
+    </div>
+    <div class="panel">
+      <h2>Backup and restore</h2>
+      <p class="small">Export a CSV copy of your records. Photos are kept in the app's local database and are not included in CSV.</p>
+      <div class="actions"><button id="exportCsv">Export CSV</button><button id="exportJson" class="secondary">Export full backup (with photos)</button></div>
+      <label for="importJson">Restore full backup JSON</label><input id="importJson" type="file" accept="application/json">
+      <p class="small">Keep the exported JSON somewhere safe. It contains your records and photo data.</p>
+    </div>
+    <div class="panel">
+      <h2>China travel reminder</h2>
+      <p class="small">Test this app before departure, save it to your iPhone Home Screen, and keep your phone charged. Google Sheets sync may not work on ordinary mainland Chinese internet. Local saving, browsing and photo capture are designed to work offline after the first load.</p>
+    </div>
+  </section>
+</main>
+<footer><div><button id="footerAdd">＋ Add</button><button id="footerRecords" class="secondary">Records</button><button id="footerSync" class="secondary">Sync</button></div></footer>
+<script src="app.js"></script>
+</body></html>
